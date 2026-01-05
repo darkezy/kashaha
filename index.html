@@ -13,6 +13,9 @@
     <!-- html2canvas library for screenshot -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
+    <!-- Chart.js library for dashboard charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -843,17 +846,121 @@
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('income')">مصادر الدخل</button>
+            <button class="tab active" onclick="switchTab('dashboard')">لوحة المعلومات</button>
+            <button class="tab" onclick="switchTab('income')">مصادر الدخل</button>
             <button class="tab" onclick="switchTab('expenses')">ميزانية الأسرة</button>
+            <button class="tab" onclick="switchTab('analysis')">تحليل موقف الأسرة</button>
+            <button class="tab" onclick="switchTab('budget')">الميزانية المخططة</button>
             <button class="tab" onclick="switchTab('assets')">الأصول والخصوم</button>
             <button class="tab" onclick="switchTab('receivables')">الذمم المدينة/الدائنة</button>
             <button class="tab" onclick="switchTab('inventory')">إدارة المخزون</button>
             <button class="tab" onclick="switchTab('cashflow')">التدفقات النقدية</button>
-            <button class="tab" onclick="switchTab('analysis')">تحليل موقف الأسرة</button>
+            <button class="tab" onclick="switchTab('tax')">التقارير الضريبية</button>
+        </div>
+
+        <!-- لوحة المعلومات Dashboard -->
+        <div id="dashboard" class="tab-content active">
+            <h2 class="section-title">📊 لوحة المعلومات - نظرة شاملة</h2>
+            
+            <!-- البطاقات الرئيسية -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: var(--spacing-lg); border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">💰 الدخل الشهري</div>
+                    <div style="font-size: 2.2em; font-weight: 700;" id="dash-income">0</div>
+                    <div style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">سنوياً: <span id="dash-income-yearly">0</span></div>
+                </div>
+                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: var(--spacing-lg); border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">💳 المصاريف الشهرية</div>
+                    <div style="font-size: 2.2em; font-weight: 700;" id="dash-expenses">0</div>
+                    <div style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">سنوياً: <span id="dash-expenses-yearly">0</span></div>
+                </div>
+                <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: var(--spacing-lg); border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">💎 الفائض الشهري</div>
+                    <div style="font-size: 2.2em; font-weight: 700;" id="dash-surplus">0</div>
+                    <div style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">النسبة: <span id="dash-surplus-ratio">0%</span></div>
+                </div>
+                <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: var(--spacing-lg); border-radius: 12px; color: white; text-align: center; box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">🏦 صافي الثروة</div>
+                    <div style="font-size: 2.2em; font-weight: 700;" id="dash-networth">0</div>
+                    <div style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">الأصول - الخصوم</div>
+                </div>
+            </div>
+
+            <!-- الرسوم البيانية -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: var(--spacing-xl); margin-bottom: var(--spacing-xl);">
+                
+                <!-- رسم بياني: الدخل vs المصاريف -->
+                <div style="background: var(--bg-secondary); padding: var(--spacing-lg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow);">
+                    <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary); font-size: 1.2em; text-align: center;">📊 الدخل مقابل المصاريف</h3>
+                    <canvas id="incomeExpensesChart" style="max-height: 300px;"></canvas>
+                </div>
+
+                <!-- رسم بياني: توزيع المصاريف -->
+                <div style="background: var(--bg-secondary); padding: var(--spacing-lg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow);">
+                    <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary); font-size: 1.2em; text-align: center;">🥧 توزيع المصاريف</h3>
+                    <canvas id="expensesDistributionChart" style="max-height: 300px;"></canvas>
+                </div>
+
+            </div>
+
+            <!-- صف ثاني من الرسوم البيانية -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: var(--spacing-xl); margin-bottom: var(--spacing-xl);">
+                
+                <!-- رسم بياني: مصادر الدخل -->
+                <div style="background: var(--bg-secondary); padding: var(--spacing-lg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow);">
+                    <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary); font-size: 1.2em; text-align: center;">💰 مصادر الدخل</h3>
+                    <canvas id="incomeSourcesChart" style="max-height: 300px;"></canvas>
+                </div>
+
+                <!-- رسم بياني: الأصول والخصوم -->
+                <div style="background: var(--bg-secondary); padding: var(--spacing-lg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow);">
+                    <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary); font-size: 1.2em; text-align: center;">🏦 الأصول والخصوم</h3>
+                    <canvas id="assetsLiabilitiesChart" style="max-height: 300px;"></canvas>
+                </div>
+
+            </div>
+
+            <!-- مؤشرات الأداء المالي -->
+            <div style="background: var(--bg-tertiary); padding: var(--spacing-lg); border-radius: 12px; margin-bottom: var(--spacing-xl); border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary); font-size: 1.3em;">📈 مؤشرات الأداء المالي الرئيسية (KPIs)</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
+                    <div style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
+                        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 8px;">معدل الادخار</div>
+                        <div style="font-size: 2em; font-weight: 700; color: var(--success-color);" id="kpi-savings-rate">0%</div>
+                        <div style="font-size: 0.75em; color: var(--text-secondary); margin-top: 5px;">من الدخل</div>
+                    </div>
+                    <div style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
+                        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 8px;">نسبة المصاريف الثابتة</div>
+                        <div style="font-size: 2em; font-weight: 700; color: var(--warning-color);" id="kpi-fixed-expenses">0%</div>
+                        <div style="font-size: 0.75em; color: var(--text-secondary); margin-top: 5px;">من الدخل</div>
+                    </div>
+                    <div style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
+                        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 8px;">نسبة السيولة</div>
+                        <div style="font-size: 2em; font-weight: 700; color: var(--accent-color);" id="kpi-liquidity-ratio">0%</div>
+                        <div style="font-size: 0.75em; color: var(--text-secondary); margin-top: 5px;">الأصول السائلة</div>
+                    </div>
+                    <div style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
+                        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 8px;">معدل الاكتفاء المالي</div>
+                        <div style="font-size: 2em; font-weight: 700; color: var(--success-color);" id="kpi-financial-independence">0</div>
+                        <div style="font-size: 0.75em; color: var(--text-secondary); margin-top: 5px;">عدد الأشهر</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ملخص سريع -->
+            <div style="background: var(--bg-tertiary); padding: var(--spacing-lg); border-radius: 12px; margin-bottom: var(--spacing-xl); border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary); font-size: 1.3em;">⚡ ملخص سريع</h3>
+                <div id="dashboard-summary" style="line-height: 2; color: var(--text-primary);"></div>
+            </div>
+
+            <!-- تنبيهات وتوصيات -->
+            <div id="dashboard-alerts" style="margin-bottom: var(--spacing-xl);"></div>
+
+            <button class="btn btn-export" onclick="exportToPDF('dashboard')">📸 حفظ صورة للوحة المعلومات</button>
         </div>
 
         <!-- قسم مصادر الدخل -->
-        <div id="income" class="tab-content active">
+        <div id="income" class="tab-content">
             <h2 class="section-title">📊 تحليل دخل الأسرة</h2>
             
             <table id="incomeTable">
@@ -1266,6 +1373,257 @@
             </table>
 
             <button class="btn btn-export" onclick="exportToPDF('expenses')">📸 حفظ صورة لتحليل المصاريف</button>
+        </div>
+
+        <!-- قسم الميزانية المخططة vs الفعلية -->
+        <div id="budget" class="tab-content">
+            <h2 class="section-title">🎯 الميزانية المخططة مقابل الفعلية</h2>
+            
+            <!-- نظرة عامة سريعة -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: var(--spacing-lg); border-radius: 8px; color: white; text-align: center;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">📊 الدخل المخطط</div>
+                    <div style="font-size: 2em; font-weight: 700;" id="planned-income-total">0</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: var(--spacing-lg); border-radius: 8px; color: white; text-align: center;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">✅ الدخل الفعلي</div>
+                    <div style="font-size: 2em; font-weight: 700;" id="actual-income-total">0</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: var(--spacing-lg); border-radius: 8px; color: white; text-align: center;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">📊 المصاريف المخططة</div>
+                    <div style="font-size: 2em; font-weight: 700;" id="planned-expenses-total">0</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); padding: var(--spacing-lg); border-radius: 8px; color: white; text-align: center;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">✅ المصاريف الفعلية</div>
+                    <div style="font-size: 2em; font-weight: 700;" id="actual-expenses-total">0</div>
+                </div>
+            </div>
+
+            <table id="budgetTable">
+                <thead>
+                    <tr>
+                        <th style="width: 5%">#</th>
+                        <th style="width: 25%">البند</th>
+                        <th style="width: 15%">المخطط</th>
+                        <th style="width: 15%">الفعلي</th>
+                        <th style="width: 15%">الفرق</th>
+                        <th style="width: 15%">نسبة الإنجاز</th>
+                        <th style="width: 10%">الحالة</th>
+                    </tr>
+                </thead>
+                <tbody id="budgetBody">
+                    <!-- ===== الدخل ===== -->
+                    <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <td colspan="7" style="padding: var(--spacing-md); font-size: 1.2em; font-weight: 700; text-align: center;">
+                            💰 الدخل الشهري (Income)
+                        </td>
+                    </tr>
+
+                    <tr data-category="income-salary">
+                        <td>1</td>
+                        <td>الرواتب والأجور</td>
+                        <td><input type="number" class="planned-income" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-income" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="income-business">
+                        <td>2</td>
+                        <td>دخل الأعمال والمشاريع</td>
+                        <td><input type="number" class="planned-income" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-income" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="income-investment">
+                        <td>3</td>
+                        <td>دخل الاستثمارات</td>
+                        <td><input type="number" class="planned-income" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-income" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="income-other">
+                        <td>4</td>
+                        <td>دخل آخر</td>
+                        <td><input type="number" class="planned-income" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-income" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr class="total-row">
+                        <td></td>
+                        <td><strong>إجمالي الدخل</strong></td>
+                        <td><strong id="total-planned-income">0</strong></td>
+                        <td><strong id="total-actual-income">0</strong></td>
+                        <td><strong id="total-income-difference">0</strong></td>
+                        <td><strong id="total-income-achievement">0%</strong></td>
+                        <td></td>
+                    </tr>
+
+                    <!-- فاصل -->
+                    <tr style="height: 20px; background: var(--bg-primary);"><td colspan="7"></td></tr>
+
+                    <!-- ===== المصاريف ===== -->
+                    <tr style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                        <td colspan="7" style="padding: var(--spacing-md); font-size: 1.2em; font-weight: 700; text-align: center;">
+                            💳 المصاريف الشهرية (Expenses)
+                        </td>
+                    </tr>
+
+                    <tr data-category="expense-housing">
+                        <td>5</td>
+                        <td>السكن (إيجار / قسط)</td>
+                        <td><input type="number" class="planned-expense" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-expense" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="expense-food">
+                        <td>6</td>
+                        <td>الطعام والمقاضي</td>
+                        <td><input type="number" class="planned-expense" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-expense" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="expense-transport">
+                        <td>7</td>
+                        <td>المواصلات والبنزين</td>
+                        <td><input type="number" class="planned-expense" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-expense" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="expense-utilities">
+                        <td>8</td>
+                        <td>الفواتير والخدمات</td>
+                        <td><input type="number" class="planned-expense" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-expense" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="expense-health">
+                        <td>9</td>
+                        <td>الصحة والتأمين</td>
+                        <td><input type="number" class="planned-expense" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-expense" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="expense-education">
+                        <td>10</td>
+                        <td>التعليم</td>
+                        <td><input type="number" class="planned-expense" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-expense" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="expense-entertainment">
+                        <td>11</td>
+                        <td>الترفيه والتسلية</td>
+                        <td><input type="number" class="planned-expense" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-expense" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="expense-savings">
+                        <td>12</td>
+                        <td>الادخار والاستثمار</td>
+                        <td><input type="number" class="planned-expense" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-expense" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="expense-debts">
+                        <td>13</td>
+                        <td>سداد الديون والقروض</td>
+                        <td><input type="number" class="planned-expense" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-expense" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr data-category="expense-other">
+                        <td>14</td>
+                        <td>مصاريف أخرى</td>
+                        <td><input type="number" class="planned-expense" value="0" onchange="calculateBudget()"></td>
+                        <td><input type="number" class="actual-expense" value="0" onchange="calculateBudget()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        <td class="difference-cell">0</td>
+                        <td class="achievement-cell">0%</td>
+                        <td class="status-cell">-</td>
+                    </tr>
+
+                    <tr class="total-row">
+                        <td></td>
+                        <td><strong>إجمالي المصاريف</strong></td>
+                        <td><strong id="total-planned-expenses">0</strong></td>
+                        <td><strong id="total-actual-expenses">0</strong></td>
+                        <td><strong id="total-expenses-difference">0</strong></td>
+                        <td><strong id="total-expenses-achievement">0%</strong></td>
+                        <td></td>
+                    </tr>
+
+                    <!-- فاصل -->
+                    <tr style="height: 20px; background: var(--bg-primary);"><td colspan="7"></td></tr>
+
+                    <!-- ===== صافي الميزانية ===== -->
+                    <tr style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                        <td colspan="7" style="padding: var(--spacing-md); font-size: 1.2em; font-weight: 700; text-align: center;">
+                            💎 صافي الميزانية (Net Budget)
+                        </td>
+                    </tr>
+
+                    <tr class="grand-total-row" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.1) 100%);">
+                        <td></td>
+                        <td><strong>الفائض / العجز</strong></td>
+                        <td><strong id="net-planned-budget">0</strong></td>
+                        <td><strong id="net-actual-budget">0</strong></td>
+                        <td><strong id="net-budget-difference">0</strong></td>
+                        <td><strong id="net-budget-achievement">0%</strong></td>
+                        <td></td>
+                    </tr>
+
+                    <tr style="background: #e7f3ff; border: 2px solid #0d6efd;">
+                        <td colspan="7" style="padding: var(--spacing-md); text-align: center; color: #0d6efd; font-weight: 600;">
+                            💡 <strong>ملاحظة:</strong> الأرقام الفعلية يتم حسابها تلقائياً من بيانات الدخل والمصاريف الموجودة
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- تحليل الانحرافات -->
+            <div style="background: var(--bg-tertiary); padding: var(--spacing-lg); border-radius: 8px; margin-top: var(--spacing-xl); border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary); font-size: 1.3em;">📊 تحليل الانحرافات (Variance Analysis)</h3>
+                <div id="variance-alerts"></div>
+            </div>
+
+            <button class="btn btn-export" onclick="exportToPDF('budget')">📸 حفظ صورة للميزانية المخططة</button>
         </div>
 
         <!-- قسم الأصول والخصوم -->
@@ -2360,6 +2718,217 @@
             </div>
 
             <button class="btn btn-export" onclick="exportToPDF('cashflow')">📸 حفظ صورة للتدفقات النقدية</button>
+        </div>
+
+        <!-- قسم التقارير الضريبية -->
+        <div id="tax" class="tab-content">
+            <h2 class="section-title">🧾 التقارير الضريبية - الزكاة والضرائب</h2>
+            
+            <!-- نظرة عامة سريعة -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: var(--spacing-lg); border-radius: 8px; color: white; text-align: center;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">📊 إجمالي الدخل السنوي</div>
+                    <div style="font-size: 2em; font-weight: 700;" id="tax-total-income">0</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: var(--spacing-lg); border-radius: 8px; color: white; text-align: center;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">🕌 الزكاة المستحقة (2.5%)</div>
+                    <div style="font-size: 2em; font-weight: 700;" id="zakat-amount">0</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: var(--spacing-lg); border-radius: 8px; color: white; text-align: center;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">💼 الضريبة المقدرة</div>
+                    <div style="font-size: 2em; font-weight: 700;" id="tax-amount">0</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: var(--spacing-lg); border-radius: 8px; color: white; text-align: center;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">💰 صافي بعد الزكاة والضريبة</div>
+                    <div style="font-size: 2em; font-weight: 700;" id="net-after-tax">0</div>
+                </div>
+            </div>
+
+            <!-- حاسبة الزكاة -->
+            <div style="background: var(--bg-tertiary); padding: var(--spacing-lg); border-radius: 8px; margin-bottom: var(--spacing-xl); border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary); font-size: 1.3em;">🕌 حاسبة الزكاة</h3>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50%">البند</th>
+                            <th style="width: 50%">المبلغ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>الأموال النقدية والحسابات البنكية</td>
+                            <td><input type="number" id="zakat-cash" value="0" onchange="calculateZakat()"></td>
+                        </tr>
+                        <tr>
+                            <td>الذهب والفضة (بالقيمة النقدية)</td>
+                            <td><input type="number" id="zakat-gold" value="0" onchange="calculateZakat()"></td>
+                        </tr>
+                        <tr>
+                            <td>الأسهم والاستثمارات</td>
+                            <td><input type="number" id="zakat-stocks" value="0" onchange="calculateZakat()"></td>
+                        </tr>
+                        <tr>
+                            <td>العقارات الاستثمارية (القيمة السوقية)</td>
+                            <td><input type="number" id="zakat-property" value="0" onchange="calculateZakat()"></td>
+                        </tr>
+                        <tr>
+                            <td>بضاعة التجارة (بسعر السوق)</td>
+                            <td><input type="number" id="zakat-inventory" value="0" onchange="calculateZakat()"></td>
+                        </tr>
+                        <tr>
+                            <td>الديون المرجوة (لك عند الآخرين)</td>
+                            <td><input type="number" id="zakat-receivables" value="0" onchange="calculateZakat()"></td>
+                        </tr>
+                        <tr class="subtotal-row">
+                            <td><strong>إجمالي الأموال الزكوية</strong></td>
+                            <td><strong id="zakat-total-zakawi">0</strong></td>
+                        </tr>
+                        <tr>
+                            <td>الديون المستحقة (عليك فوراً)</td>
+                            <td><input type="number" id="zakat-debts" value="0" onchange="calculateZakat()"></td>
+                        </tr>
+                        <tr class="total-row">
+                            <td><strong>الوعاء الزكوي (المال الخاضع للزكاة)</strong></td>
+                            <td><strong id="zakat-base">0</strong></td>
+                        </tr>
+                        <tr style="background: #d4edda;">
+                            <td><strong>النصاب (85 جرام ذهب × السعر)</strong></td>
+                            <td><input type="number" id="nisab-value" value="0" placeholder="أدخل قيمة النصاب" onchange="calculateZakat()"></td>
+                        </tr>
+                        <tr class="grand-total-row">
+                            <td><strong>🕌 الزكاة المستحقة (2.5%)</strong></td>
+                            <td><strong id="zakat-due" style="font-size: 1.3em;">0</strong></td>
+                        </tr>
+                        <tr style="background: #fff3cd;">
+                            <td colspan="2" style="padding: var(--spacing-md); text-align: center; color: #856404;">
+                                <strong>ملاحظة:</strong> الزكاة واجبة إذا بلغ المال النصاب وحال عليه الحول (سنة كاملة)
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- حاسبة الضرائب -->
+            <div style="background: var(--bg-tertiary); padding: var(--spacing-lg); border-radius: 8px; margin-bottom: var(--spacing-xl); border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary); font-size: 1.3em;">💼 حاسبة ضريبة الدخل</h3>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50%">البند</th>
+                            <th style="width: 50%">المبلغ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>إجمالي الدخل السنوي</td>
+                            <td><input type="number" id="tax-income" value="0" onchange="calculateTax()" readonly style="background: #f8f9fa; cursor: not-allowed;"></td>
+                        </tr>
+                        <tr>
+                            <td>الخصومات والإعفاءات</td>
+                            <td><input type="number" id="tax-deductions" value="0" onchange="calculateTax()"></td>
+                        </tr>
+                        <tr class="subtotal-row">
+                            <td><strong>الدخل الخاضع للضريبة</strong></td>
+                            <td><strong id="taxable-income">0</strong></td>
+                        </tr>
+                        <tr>
+                            <td>نسبة الضريبة (%)</td>
+                            <td><input type="number" id="tax-rate" value="0" min="0" max="100" step="0.1" onchange="calculateTax()"></td>
+                        </tr>
+                        <tr class="grand-total-row">
+                            <td><strong>💼 الضريبة المستحقة</strong></td>
+                            <td><strong id="tax-due" style="font-size: 1.3em;">0</strong></td>
+                        </tr>
+                        <tr style="background: #e7f3ff;">
+                            <td colspan="2" style="padding: var(--spacing-md); text-align: center; color: #0d6efd;">
+                                <strong>ملاحظة:</strong> نسب الضرائب تختلف حسب الدولة والشريحة الضريبية. استشر مستشار ضريبي للتأكد.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ضريبة القيمة المضافة -->
+            <div style="background: var(--bg-tertiary); padding: var(--spacing-lg); border-radius: 8px; margin-bottom: var(--spacing-xl); border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary); font-size: 1.3em;">🏪 حاسبة ضريبة القيمة المضافة (VAT)</h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
+                    <div>
+                        <h4 style="margin-bottom: var(--spacing-sm); color: var(--text-primary);">إضافة الضريبة</h4>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td>السعر قبل الضريبة</td>
+                                    <td><input type="number" id="vat-price-before" value="0" onchange="calculateVAT('add')"></td>
+                                </tr>
+                                <tr>
+                                    <td>نسبة الضريبة (%)</td>
+                                    <td><input type="number" id="vat-rate-add" value="15" onchange="calculateVAT('add')"></td>
+                                </tr>
+                                <tr class="subtotal-row">
+                                    <td><strong>قيمة الضريبة</strong></td>
+                                    <td><strong id="vat-amount-add">0</strong></td>
+                                </tr>
+                                <tr class="total-row">
+                                    <td><strong>السعر شامل الضريبة</strong></td>
+                                    <td><strong id="vat-price-after">0</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div>
+                        <h4 style="margin-bottom: var(--spacing-sm); color: var(--text-primary);">استخراج الضريبة</h4>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td>السعر شامل الضريبة</td>
+                                    <td><input type="number" id="vat-price-with" value="0" onchange="calculateVAT('extract')"></td>
+                                </tr>
+                                <tr>
+                                    <td>نسبة الضريبة (%)</td>
+                                    <td><input type="number" id="vat-rate-extract" value="15" onchange="calculateVAT('extract')"></td>
+                                </tr>
+                                <tr class="subtotal-row">
+                                    <td><strong>قيمة الضريبة</strong></td>
+                                    <td><strong id="vat-amount-extract">0</strong></td>
+                                </tr>
+                                <tr class="total-row">
+                                    <td><strong>السعر قبل الضريبة</strong></td>
+                                    <td><strong id="vat-price-without">0</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ملخص الالتزامات الضريبية -->
+            <div style="background: var(--bg-tertiary); padding: var(--spacing-lg); border-radius: 8px; margin-bottom: var(--spacing-xl); border: 1px solid var(--border-color);">
+                <h3 style="margin-bottom: var(--spacing-md); color: var(--text-primary); font-size: 1.3em;">📋 ملخص الالتزامات الضريبية السنوية</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md);">
+                    <div style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: 6px; border: 1px solid var(--border-color);">
+                        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 5px;">الزكاة المستحقة</div>
+                        <div style="font-size: 1.5em; font-weight: 700; color: var(--success-color);" id="summary-zakat">0</div>
+                    </div>
+                    <div style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: 6px; border: 1px solid var(--border-color);">
+                        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 5px;">ضريبة الدخل المستحقة</div>
+                        <div style="font-size: 1.5em; font-weight: 700; color: var(--warning-color);" id="summary-income-tax">0</div>
+                    </div>
+                    <div style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: 6px; border: 1px solid var(--border-color);">
+                        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 5px;">إجمالي الالتزامات</div>
+                        <div style="font-size: 1.5em; font-weight: 700; color: var(--danger-color);" id="summary-total-obligations">0</div>
+                    </div>
+                    <div style="background: var(--bg-secondary); padding: var(--spacing-md); border-radius: 6px; border: 1px solid var(--border-color);">
+                        <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 5px;">نسبة الالتزامات من الدخل</div>
+                        <div style="font-size: 1.5em; font-weight: 700; color: var(--accent-color);" id="summary-obligations-ratio">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-export" onclick="exportToPDF('tax')">📸 حفظ صورة للتقارير الضريبية</button>
         </div>
 
         <!-- قسم التحليل -->
@@ -3527,6 +4096,7 @@
             
             // حساب النسب المالية
             calculateFinancialRatios(totalAssets, totalLiabilities, netWorth);
+            updateDashboard(); // تحديث Dashboard
         }
 
         function calculateFinancialRatios(totalAssets, totalLiabilities, netWorth) {
@@ -4274,6 +4844,695 @@
 
         // ==================== نهاية دوال التدفقات النقدية ====================
 
+        // ==================== دوال الميزانية المخططة vs الفعلية ====================
+
+        function calculateBudget() {
+            // جمع الدخل المخطط
+            let plannedIncome = 0;
+            document.querySelectorAll('.planned-income').forEach(input => {
+                plannedIncome += parseFloat(input.value) || 0;
+            });
+            
+            // جمع المصاريف المخططة
+            let plannedExpenses = 0;
+            document.querySelectorAll('.planned-expense').forEach(input => {
+                plannedExpenses += parseFloat(input.value) || 0;
+            });
+            
+            // الحصول على البيانات الفعلية من قسم الدخل والمصاريف
+            const actualIncome = parseFloat(document.getElementById('monthly-income')?.textContent.replace(/,/g, '')) || 0;
+            const actualExpenses = parseFloat(document.getElementById('monthly-expenses')?.textContent.replace(/,/g, '')) || 0;
+            
+            // تحديث الحقول الفعلية (readonly)
+            document.querySelectorAll('.actual-income').forEach((input, index) => {
+                // يمكن تحسين هذا لربط كل صف بفئته المقابلة
+                input.value = 0; // مؤقتاً
+            });
+            
+            // تحديث جداول الدخل
+            const incomeRows = document.querySelectorAll('#budgetBody tr[data-category^="income-"]');
+            incomeRows.forEach(row => {
+                const planned = parseFloat(row.querySelector('.planned-income')?.value) || 0;
+                const actual = parseFloat(row.querySelector('.actual-income')?.value) || 0;
+                const difference = actual - planned;
+                const achievement = planned > 0 ? (actual / planned) * 100 : 0;
+                
+                const diffCell = row.querySelector('.difference-cell');
+                const achCell = row.querySelector('.achievement-cell');
+                const statusCell = row.querySelector('.status-cell');
+                
+                if (diffCell) {
+                    diffCell.textContent = difference.toLocaleString();
+                    diffCell.style.color = difference >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+                }
+                
+                if (achCell) {
+                    achCell.textContent = achievement.toFixed(1) + '%';
+                    achCell.style.color = achievement >= 100 ? 'var(--success-color)' : 
+                                          achievement >= 80 ? 'var(--warning-color)' : 
+                                          'var(--danger-color)';
+                }
+                
+                if (statusCell) {
+                    if (achievement >= 100) statusCell.textContent = '✅';
+                    else if (achievement >= 80) statusCell.textContent = '⚠️';
+                    else statusCell.textContent = '❌';
+                }
+            });
+            
+            // تحديث جداول المصاريف
+            const expenseRows = document.querySelectorAll('#budgetBody tr[data-category^="expense-"]');
+            expenseRows.forEach(row => {
+                const planned = parseFloat(row.querySelector('.planned-expense')?.value) || 0;
+                const actual = parseFloat(row.querySelector('.actual-expense')?.value) || 0;
+                const difference = planned - actual; // عكس للمصاريف (الأقل أفضل)
+                const achievement = planned > 0 ? (actual / planned) * 100 : 0;
+                
+                const diffCell = row.querySelector('.difference-cell');
+                const achCell = row.querySelector('.achievement-cell');
+                const statusCell = row.querySelector('.status-cell');
+                
+                if (diffCell) {
+                    diffCell.textContent = difference.toLocaleString();
+                    diffCell.style.color = difference >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+                }
+                
+                if (achCell) {
+                    achCell.textContent = achievement.toFixed(1) + '%';
+                    achCell.style.color = achievement <= 100 ? 'var(--success-color)' : 
+                                          achievement <= 120 ? 'var(--warning-color)' : 
+                                          'var(--danger-color)';
+                }
+                
+                if (statusCell) {
+                    if (achievement <= 100) statusCell.textContent = '✅';
+                    else if (achievement <= 120) statusCell.textContent = '⚠️';
+                    else statusCell.textContent = '❌';
+                }
+            });
+            
+            // تحديث الإجماليات
+            document.getElementById('total-planned-income').textContent = plannedIncome.toLocaleString();
+            document.getElementById('total-actual-income').textContent = actualIncome.toLocaleString();
+            document.getElementById('total-income-difference').textContent = (actualIncome - plannedIncome).toLocaleString();
+            
+            const incomeAchievement = plannedIncome > 0 ? (actualIncome / plannedIncome) * 100 : 0;
+            document.getElementById('total-income-achievement').textContent = incomeAchievement.toFixed(1) + '%';
+            
+            document.getElementById('total-planned-expenses').textContent = plannedExpenses.toLocaleString();
+            document.getElementById('total-actual-expenses').textContent = actualExpenses.toLocaleString();
+            document.getElementById('total-expenses-difference').textContent = (plannedExpenses - actualExpenses).toLocaleString();
+            
+            const expensesAchievement = plannedExpenses > 0 ? (actualExpenses / plannedExpenses) * 100 : 0;
+            document.getElementById('total-expenses-achievement').textContent = expensesAchievement.toFixed(1) + '%';
+            
+            // صافي الميزانية
+            const netPlanned = plannedIncome - plannedExpenses;
+            const netActual = actualIncome - actualExpenses;
+            const netDifference = netActual - netPlanned;
+            
+            document.getElementById('net-planned-budget').textContent = netPlanned.toLocaleString();
+            document.getElementById('net-actual-budget').textContent = netActual.toLocaleString();
+            document.getElementById('net-budget-difference').textContent = netDifference.toLocaleString();
+            
+            const netAchievement = netPlanned !== 0 ? (netActual / netPlanned) * 100 : 0;
+            document.getElementById('net-budget-achievement').textContent = netAchievement.toFixed(1) + '%';
+            
+            // تلوين النتائج
+            const netActualEl = document.getElementById('net-actual-budget');
+            netActualEl.style.color = netActual >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+            
+            // تحديث البطاقات العلوية
+            document.getElementById('planned-income-total').textContent = plannedIncome.toLocaleString();
+            document.getElementById('actual-income-total').textContent = actualIncome.toLocaleString();
+            document.getElementById('planned-expenses-total').textContent = plannedExpenses.toLocaleString();
+            document.getElementById('actual-expenses-total').textContent = actualExpenses.toLocaleString();
+            
+            // عرض تحليل الانحرافات
+            displayVarianceAnalysis(plannedIncome, actualIncome, plannedExpenses, actualExpenses);
+        }
+
+        function displayVarianceAnalysis(plannedIncome, actualIncome, plannedExpenses, actualExpenses) {
+            const alertsDiv = document.getElementById('variance-alerts');
+            
+            let html = '';
+            const incomeVariance = actualIncome - plannedIncome;
+            const expenseVariance = actualExpenses - plannedExpenses;
+            
+            // تحليل الدخل
+            if (Math.abs(incomeVariance) > plannedIncome * 0.1) { // أكثر من 10%
+                const type = incomeVariance > 0 ? 'positive' : 'negative';
+                const color = incomeVariance > 0 ? '#d4edda' : '#f8d7da';
+                const borderColor = incomeVariance > 0 ? '#28a745' : '#dc3545';
+                const textColor = incomeVariance > 0 ? '#155724' : '#721c24';
+                const icon = incomeVariance > 0 ? '📈' : '📉';
+                
+                html += `<div style="background: ${color}; border: 2px solid ${borderColor}; padding: var(--spacing-md); border-radius: 6px; margin-bottom: var(--spacing-md);">`;
+                html += `<strong style="color: ${textColor};">${icon} انحراف كبير في الدخل:</strong>`;
+                html += `<p style="margin: 10px 0 0 0; color: ${textColor};">`;
+                html += incomeVariance > 0 
+                    ? `الدخل الفعلي أعلى من المخطط بمقدار ${Math.abs(incomeVariance).toLocaleString()} (${((incomeVariance/plannedIncome)*100).toFixed(1)}%). استثمر الفائض بحكمة!`
+                    : `الدخل الفعلي أقل من المخطط بمقدار ${Math.abs(incomeVariance).toLocaleString()} (${((Math.abs(incomeVariance)/plannedIncome)*100).toFixed(1)}%). ابحث عن مصادر دخل إضافية.`;
+                html += `</p></div>`;
+            }
+            
+            // تحليل المصاريف
+            if (Math.abs(expenseVariance) > plannedExpenses * 0.1) { // أكثر من 10%
+                const type = expenseVariance < 0 ? 'positive' : 'negative';
+                const color = expenseVariance < 0 ? '#d4edda' : '#f8d7da';
+                const borderColor = expenseVariance < 0 ? '#28a745' : '#dc3545';
+                const textColor = expenseVariance < 0 ? '#155724' : '#721c24';
+                const icon = expenseVariance < 0 ? '💰' : '⚠️';
+                
+                html += `<div style="background: ${color}; border: 2px solid ${borderColor}; padding: var(--spacing-md); border-radius: 6px; margin-bottom: var(--spacing-md);">`;
+                html += `<strong style="color: ${textColor};">${icon} انحراف في المصاريف:</strong>`;
+                html += `<p style="margin: 10px 0 0 0; color: ${textColor};">`;
+                html += expenseVariance < 0 
+                    ? `المصاريف الفعلية أقل من المخطط بمقدار ${Math.abs(expenseVariance).toLocaleString()} (${((Math.abs(expenseVariance)/plannedExpenses)*100).toFixed(1)}%). أحسنت! استمر في الانضباط المالي.`
+                    : `المصاريف الفعلية أعلى من المخطط بمقدار ${Math.abs(expenseVariance).toLocaleString()} (${((expenseVariance/plannedExpenses)*100).toFixed(1)}%). راجع المصاريف وقلل الإنفاق غير الضروري.`;
+                html += `</p></div>`;
+            }
+            
+            // إذا كان كل شيء ضمن الخطة
+            if (html === '') {
+                html = `<div style="background: #d4edda; border: 2px solid #28a745; padding: var(--spacing-md); border-radius: 6px;">`;
+                html += `<strong style="color: #155724;">✅ رائع! الأداء المالي ضمن الخطة</strong>`;
+                html += `<p style="margin: 10px 0 0 0; color: #155724;">الانحرافات ضمن الحدود المقبولة (أقل من 10%). استمر على هذا النهج!</p>`;
+                html += `</div>`;
+            }
+            
+            alertsDiv.innerHTML = html;
+        }
+
+        // ==================== نهاية دوال الميزانية المخططة ====================
+
+        // ==================== دوال التقارير الضريبية ====================
+
+        function calculateZakat() {
+            // جمع الأموال الزكوية
+            const cash = parseFloat(document.getElementById('zakat-cash')?.value) || 0;
+            const gold = parseFloat(document.getElementById('zakat-gold')?.value) || 0;
+            const stocks = parseFloat(document.getElementById('zakat-stocks')?.value) || 0;
+            const property = parseFloat(document.getElementById('zakat-property')?.value) || 0;
+            const inventory = parseFloat(document.getElementById('zakat-inventory')?.value) || 0;
+            const receivables = parseFloat(document.getElementById('zakat-receivables')?.value) || 0;
+            
+            // الديون المستحقة
+            const debts = parseFloat(document.getElementById('zakat-debts')?.value) || 0;
+            
+            // إجمالي الأموال الزكوية
+            const totalZakawi = cash + gold + stocks + property + inventory + receivables;
+            document.getElementById('zakat-total-zakawi').textContent = totalZakawi.toLocaleString();
+            
+            // الوعاء الزكوي (بعد خصم الديون)
+            const zakatBase = Math.max(0, totalZakawi - debts);
+            document.getElementById('zakat-base').textContent = zakatBase.toLocaleString();
+            
+            // النصاب
+            const nisabValue = parseFloat(document.getElementById('nisab-value')?.value) || 0;
+            
+            // حساب الزكاة (2.5%)
+            let zakatDue = 0;
+            if (zakatBase >= nisabValue && nisabValue > 0) {
+                zakatDue = zakatBase * 0.025;
+            }
+            
+            document.getElementById('zakat-due').textContent = zakatDue.toLocaleString();
+            document.getElementById('zakat-amount').textContent = zakatDue.toLocaleString();
+            
+            // تحديث الملخص
+            updateTaxSummary();
+        }
+
+        function calculateTax() {
+            // الحصول على الدخل السنوي من قسم الدخل
+            const yearlyIncome = parseFloat(document.getElementById('yearly-income')?.textContent.replace(/,/g, '')) || 0;
+            document.getElementById('tax-income').value = yearlyIncome;
+            
+            // الخصومات
+            const deductions = parseFloat(document.getElementById('tax-deductions')?.value) || 0;
+            
+            // الدخل الخاضع للضريبة
+            const taxableIncome = Math.max(0, yearlyIncome - deductions);
+            document.getElementById('taxable-income').textContent = taxableIncome.toLocaleString();
+            
+            // نسبة الضريبة
+            const taxRate = parseFloat(document.getElementById('tax-rate')?.value) || 0;
+            
+            // الضريبة المستحقة
+            const taxDue = (taxableIncome * taxRate) / 100;
+            document.getElementById('tax-due').textContent = taxDue.toLocaleString();
+            document.getElementById('tax-amount').textContent = taxDue.toLocaleString();
+            
+            // صافي بعد الزكاة والضريبة
+            const zakatDue = parseFloat(document.getElementById('zakat-due')?.textContent.replace(/,/g, '')) || 0;
+            const netAfterTax = yearlyIncome - zakatDue - taxDue;
+            document.getElementById('net-after-tax').textContent = netAfterTax.toLocaleString();
+            
+            // تحديث الملخص
+            updateTaxSummary();
+        }
+
+        function calculateVAT(type) {
+            if (type === 'add') {
+                // إضافة الضريبة
+                const priceBefore = parseFloat(document.getElementById('vat-price-before')?.value) || 0;
+                const vatRate = parseFloat(document.getElementById('vat-rate-add')?.value) || 0;
+                
+                const vatAmount = (priceBefore * vatRate) / 100;
+                const priceAfter = priceBefore + vatAmount;
+                
+                document.getElementById('vat-amount-add').textContent = vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                document.getElementById('vat-price-after').textContent = priceAfter.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+            } else if (type === 'extract') {
+                // استخراج الضريبة
+                const priceWith = parseFloat(document.getElementById('vat-price-with')?.value) || 0;
+                const vatRate = parseFloat(document.getElementById('vat-rate-extract')?.value) || 0;
+                
+                const priceWithout = priceWith / (1 + (vatRate / 100));
+                const vatAmount = priceWith - priceWithout;
+                
+                document.getElementById('vat-amount-extract').textContent = vatAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                document.getElementById('vat-price-without').textContent = priceWithout.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+        }
+
+        function updateTaxSummary() {
+            const zakatDue = parseFloat(document.getElementById('zakat-due')?.textContent.replace(/,/g, '')) || 0;
+            const taxDue = parseFloat(document.getElementById('tax-due')?.textContent.replace(/,/g, '')) || 0;
+            const yearlyIncome = parseFloat(document.getElementById('tax-income')?.value) || 0;
+            
+            const totalObligations = zakatDue + taxDue;
+            const obligationsRatio = yearlyIncome > 0 ? (totalObligations / yearlyIncome) * 100 : 0;
+            
+            document.getElementById('summary-zakat').textContent = zakatDue.toLocaleString();
+            document.getElementById('summary-income-tax').textContent = taxDue.toLocaleString();
+            document.getElementById('summary-total-obligations').textContent = totalObligations.toLocaleString();
+            document.getElementById('summary-obligations-ratio').textContent = obligationsRatio.toFixed(1) + '%';
+            
+            // تحديث بطاقة الدخل الإجمالي
+            document.getElementById('tax-total-income').textContent = yearlyIncome.toLocaleString();
+        }
+
+        // ==================== نهاية دوال التقارير الضريبية ====================
+
+        // ==================== دوال لوحة المعلومات Dashboard ====================
+
+        let dashboardCharts = {
+            incomeExpenses: null,
+            expensesDistribution: null,
+            incomeSources: null,
+            assetsLiabilities: null
+        };
+
+        function updateDashboard() {
+            // الحصول على البيانات من الأقسام الأخرى
+            const monthlyIncome = parseFloat(document.getElementById('monthly-income')?.textContent.replace(/,/g, '')) || 0;
+            const yearlyIncome = parseFloat(document.getElementById('yearly-income')?.textContent.replace(/,/g, '')) || 0;
+            const monthlyExpenses = parseFloat(document.getElementById('monthly-expenses')?.textContent.replace(/,/g, '')) || 0;
+            const yearlyExpenses = parseFloat(document.getElementById('yearly-expenses')?.textContent.replace(/,/g, '')) || 0;
+            const netSurplus = monthlyIncome - monthlyExpenses;
+            const netWorth = parseFloat(document.getElementById('net-worth')?.textContent.replace(/,/g, '')) || 0;
+            
+            // تحديث البطاقات الرئيسية
+            document.getElementById('dash-income').textContent = monthlyIncome.toLocaleString();
+            document.getElementById('dash-income-yearly').textContent = yearlyIncome.toLocaleString();
+            document.getElementById('dash-expenses').textContent = monthlyExpenses.toLocaleString();
+            document.getElementById('dash-expenses-yearly').textContent = yearlyExpenses.toLocaleString();
+            document.getElementById('dash-surplus').textContent = netSurplus.toLocaleString();
+            document.getElementById('dash-networth').textContent = netWorth.toLocaleString();
+            
+            const surplusRatio = monthlyIncome > 0 ? (netSurplus / monthlyIncome) * 100 : 0;
+            document.getElementById('dash-surplus-ratio').textContent = surplusRatio.toFixed(1) + '%';
+            
+            // تلوين الفائض
+            const surplusEl = document.getElementById('dash-surplus');
+            if (surplusEl) {
+                surplusEl.parentElement.style.background = netSurplus >= 0 
+                    ? 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
+                    : 'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)';
+            }
+            
+            // تحديث الرسوم البيانية
+            updateIncomeExpensesChart(monthlyIncome, monthlyExpenses);
+            updateExpensesDistributionChart();
+            updateIncomeSourcesChart();
+            updateAssetsLiabilitiesChart();
+            
+            // تحديث مؤشرات الأداء
+            updateKPIs(monthlyIncome, monthlyExpenses, netSurplus);
+            
+            // تحديث الملخص والتنبيهات
+            updateDashboardSummary(monthlyIncome, monthlyExpenses, netSurplus, netWorth);
+            updateDashboardAlerts(monthlyIncome, monthlyExpenses, netSurplus);
+        }
+
+        function updateIncomeExpensesChart(income, expenses) {
+            const ctx = document.getElementById('incomeExpensesChart');
+            if (!ctx) return;
+            
+            if (dashboardCharts.incomeExpenses) {
+                dashboardCharts.incomeExpenses.destroy();
+            }
+            
+            dashboardCharts.incomeExpenses = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['الدخل', 'المصاريف', 'الفائض'],
+                    datasets: [{
+                        label: 'المبلغ',
+                        data: [income, expenses, income - expenses],
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(240, 147, 251, 0.8)',
+                            income - expenses >= 0 ? 'rgba(17, 153, 142, 0.8)' : 'rgba(238, 9, 121, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(102, 126, 234, 1)',
+                            'rgba(240, 147, 251, 1)',
+                            income - expenses >= 0 ? 'rgba(17, 153, 142, 1)' : 'rgba(238, 9, 121, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            rtl: true,
+                            textDirection: 'rtl'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateExpensesDistributionChart() {
+            const ctx = document.getElementById('expensesDistributionChart');
+            if (!ctx) return;
+            
+            const categories = ['transport', 'housing', 'groceries', 'maintenance', 'entertainment', 
+                              'health', 'education', 'charity', 'debts', 'savings'];
+            const labels = ['المواصلات', 'السكن', 'المقاضي', 'الصيانة', 'الترفيه', 
+                           'الصحة', 'التعليم', 'الصدقات', 'الديون', 'الادخار'];
+            const data = [];
+            const colors = [
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 206, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)',
+                'rgba(255, 159, 64, 0.8)',
+                'rgba(199, 199, 199, 0.8)',
+                'rgba(83, 102, 255, 0.8)',
+                'rgba(255, 99, 255, 0.8)',
+                'rgba(50, 205, 50, 0.8)'
+            ];
+            
+            categories.forEach(cat => {
+                const total = parseFloat(document.getElementById(`${cat}-total`)?.textContent.replace(/,/g, '')) || 0;
+                data.push(total);
+            });
+            
+            if (dashboardCharts.expensesDistribution) {
+                dashboardCharts.expensesDistribution.destroy();
+            }
+            
+            dashboardCharts.expensesDistribution = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            rtl: true,
+                            textDirection: 'rtl'
+                        },
+                        tooltip: {
+                            rtl: true,
+                            textDirection: 'rtl',
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.parsed.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateIncomeSourcesChart() {
+            const ctx = document.getElementById('incomeSourcesChart');
+            if (!ctx) return;
+            
+            const categories = ['salaries', 'allowances', 'investments', 'others'];
+            const labels = ['الرواتب', 'الإعانات', 'الاستثمارات', 'أخرى'];
+            const data = [];
+            const colors = [
+                'rgba(102, 126, 234, 0.8)',
+                'rgba(79, 172, 254, 0.8)',
+                'rgba(17, 153, 142, 0.8)',
+                'rgba(245, 87, 108, 0.8)'
+            ];
+            
+            categories.forEach(cat => {
+                const total = parseFloat(document.getElementById(`${cat}-total`)?.textContent.replace(/,/g, '')) || 0;
+                data.push(total);
+            });
+            
+            if (dashboardCharts.incomeSources) {
+                dashboardCharts.incomeSources.destroy();
+            }
+            
+            dashboardCharts.incomeSources = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            rtl: true,
+                            textDirection: 'rtl'
+                        },
+                        tooltip: {
+                            rtl: true,
+                            textDirection: 'rtl',
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.parsed.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateAssetsLiabilitiesChart() {
+            const ctx = document.getElementById('assetsLiabilitiesChart');
+            if (!ctx) return;
+            
+            const totalAssets = parseFloat(document.getElementById('total-assets')?.textContent.replace(/,/g, '')) || 0;
+            const totalLiabilities = parseFloat(document.getElementById('total-liabilities')?.textContent.replace(/,/g, '')) || 0;
+            const netWorth = totalAssets - totalLiabilities;
+            
+            if (dashboardCharts.assetsLiabilities) {
+                dashboardCharts.assetsLiabilities.destroy();
+            }
+            
+            dashboardCharts.assetsLiabilities = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['الأصول', 'الخصوم', 'صافي الثروة'],
+                    datasets: [{
+                        label: 'المبلغ',
+                        data: [totalAssets, totalLiabilities, netWorth],
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(240, 147, 251, 0.8)',
+                            netWorth >= 0 ? 'rgba(17, 153, 142, 0.8)' : 'rgba(238, 9, 121, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(102, 126, 234, 1)',
+                            'rgba(240, 147, 251, 1)',
+                            netWorth >= 0 ? 'rgba(17, 153, 142, 1)' : 'rgba(238, 9, 121, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            rtl: true,
+                            textDirection: 'rtl'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateKPIs(income, expenses, surplus) {
+            // معدل الادخار
+            const savingsRate = income > 0 ? (surplus / income) * 100 : 0;
+            document.getElementById('kpi-savings-rate').textContent = savingsRate.toFixed(1) + '%';
+            
+            // نسبة المصاريف الثابتة (السكن + الديون)
+            const housing = parseFloat(document.getElementById('housing-total')?.textContent.replace(/,/g, '')) || 0;
+            const debts = parseFloat(document.getElementById('debts-total')?.textContent.replace(/,/g, '')) || 0;
+            const fixedExpenses = housing + debts;
+            const fixedRatio = income > 0 ? (fixedExpenses / income) * 100 : 0;
+            document.getElementById('kpi-fixed-expenses').textContent = fixedRatio.toFixed(1) + '%';
+            
+            // نسبة السيولة
+            const currentAssets = parseFloat(document.getElementById('current-assets-total')?.textContent.replace(/,/g, '')) || 0;
+            const totalAssets = parseFloat(document.getElementById('total-assets')?.textContent.replace(/,/g, '')) || 0;
+            const liquidityRatio = totalAssets > 0 ? (currentAssets / totalAssets) * 100 : 0;
+            document.getElementById('kpi-liquidity-ratio').textContent = liquidityRatio.toFixed(1) + '%';
+            
+            // معدل الاكتفاء المالي (كم شهر يمكن العيش من المدخرات)
+            const savings = parseFloat(document.getElementById('savings-total')?.textContent.replace(/,/g, '')) || 0;
+            const financialIndependence = expenses > 0 ? currentAssets / expenses : 0;
+            document.getElementById('kpi-financial-independence').textContent = financialIndependence.toFixed(1);
+        }
+
+        function updateDashboardSummary(income, expenses, surplus, netWorth) {
+            const summaryDiv = document.getElementById('dashboard-summary');
+            if (!summaryDiv) return;
+            
+            let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+            
+            html += `<li style="padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                <strong>💰 الدخل الشهري:</strong> ${income.toLocaleString()} 
+                <span style="color: var(--text-secondary); font-size: 0.9em;">(سنوياً: ${(income * 12).toLocaleString()})</span>
+            </li>`;
+            
+            html += `<li style="padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                <strong>💳 المصاريف الشهرية:</strong> ${expenses.toLocaleString()} 
+                <span style="color: var(--text-secondary); font-size: 0.9em;">(${income > 0 ? ((expenses/income)*100).toFixed(1) : 0}% من الدخل)</span>
+            </li>`;
+            
+            const surplusColor = surplus >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+            html += `<li style="padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                <strong>💎 الفائض:</strong> <span style="color: ${surplusColor};">${surplus.toLocaleString()}</span>
+                <span style="color: var(--text-secondary); font-size: 0.9em;">(${income > 0 ? ((surplus/income)*100).toFixed(1) : 0}% من الدخل)</span>
+            </li>`;
+            
+            const netWorthColor = netWorth >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+            html += `<li style="padding: 8px 0;">
+                <strong>🏦 صافي الثروة:</strong> <span style="color: ${netWorthColor};">${netWorth.toLocaleString()}</span>
+            </li>`;
+            
+            html += '</ul>';
+            summaryDiv.innerHTML = html;
+        }
+
+        function updateDashboardAlerts(income, expenses, surplus) {
+            const alertsDiv = document.getElementById('dashboard-alerts');
+            if (!alertsDiv) return;
+            
+            let html = '';
+            
+            // تنبيه العجز
+            if (surplus < 0) {
+                html += `<div style="background: #f8d7da; border: 2px solid #dc3545; padding: var(--spacing-md); border-radius: 8px; margin-bottom: var(--spacing-md);">
+                    <strong style="color: #721c24;">⚠️ تحذير: عجز في الميزانية!</strong>
+                    <p style="margin: 10px 0 0 0; color: #721c24;">
+                        المصاريف تتجاوز الدخل بمقدار ${Math.abs(surplus).toLocaleString()}. يجب تقليل المصاريف أو زيادة الدخل فوراً.
+                    </p>
+                </div>`;
+            }
+            
+            // تنبيه المصاريف الثابتة العالية
+            const fixedExpenses = (parseFloat(document.getElementById('housing-total')?.textContent.replace(/,/g, '')) || 0) +
+                                 (parseFloat(document.getElementById('debts-total')?.textContent.replace(/,/g, '')) || 0);
+            const fixedRatio = income > 0 ? (fixedExpenses / income) * 100 : 0;
+            
+            if (fixedRatio > 50) {
+                html += `<div style="background: #fff3cd; border: 2px solid #ffc107; padding: var(--spacing-md); border-radius: 8px; margin-bottom: var(--spacing-md);">
+                    <strong style="color: #856404;">⚠️ تنبيه: المصاريف الثابتة عالية</strong>
+                    <p style="margin: 10px 0 0 0; color: #856404;">
+                        المصاريف الثابتة (سكن + ديون) تشكل ${fixedRatio.toFixed(1)}% من دخلك. المثالي أن تكون أقل من 50%.
+                    </p>
+                </div>`;
+            }
+            
+            // تنبيه انعدام الادخار
+            const savings = parseFloat(document.getElementById('savings-total')?.textContent.replace(/,/g, '')) || 0;
+            if (savings === 0 && surplus > 0) {
+                html += `<div style="background: #d1ecf1; border: 2px solid #17a2b8; padding: var(--spacing-md); border-radius: 8px; margin-bottom: var(--spacing-md);">
+                    <strong style="color: #0c5460;">💡 توصية: ابدأ بالادخار</strong>
+                    <p style="margin: 10px 0 0 0; color: #0c5460;">
+                        لديك فائض ${surplus.toLocaleString()} ولكن لا يوجد ادخار. خصص على الأقل 10-20% من دخلك للادخار.
+                    </p>
+                </div>`;
+            }
+            
+            // رسالة إيجابية
+            if (surplus >= income * 0.2 && html === '') {
+                html = `<div style="background: #d4edda; border: 2px solid #28a745; padding: var(--spacing-md); border-radius: 8px;">
+                    <strong style="color: #155724;">✅ ممتاز! وضعك المالي صحي</strong>
+                    <p style="margin: 10px 0 0 0; color: #155724;">
+                        لديك فائض جيد (${((surplus/income)*100).toFixed(1)}% من دخلك). استمر على هذا النهج وفكر في استثمار الفائض.
+                    </p>
+                </div>`;
+            }
+            
+            alertsDiv.innerHTML = html;
+        }
+
+        // ==================== نهاية دوال لوحة المعلومات ====================
+
         function calculateIncome() {
             const categories = ['salaries', 'allowances', 'investments', 'others'];
             let totalMonthly = 0;
@@ -4294,6 +5553,7 @@
             document.getElementById('yearly-income').textContent = (totalMonthly * 12).toLocaleString();
             
             calculateNetSurplus();
+            updateDashboard(); // تحديث Dashboard
         }
 
         function calculateExpenses() {
@@ -4317,6 +5577,7 @@
             document.getElementById('yearly-expenses').textContent = (totalMonthly * 12).toLocaleString();
             
             calculateNetSurplus();
+            updateDashboard(); // تحديث Dashboard
         }
 
         function calculateNetSurplus() {
@@ -4557,6 +5818,10 @@
             loadTheme();
             calculateIncome();
             calculateExpenses();
+            calculateBudget();
+            calculateZakat();
+            calculateTax();
+            updateDashboard(); // تحديث Dashboard عند التحميل
             wrapTablesForMobile();
             initTelegramWebApp();
             
